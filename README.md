@@ -1,3 +1,191 @@
+# Checkmarx_SCA_All ☆彡
+Checkmarx One: Report of All SCA Vulnerabilities
+
+## Description
+
+This script collects **all SCA vulnerabilities** from **Checkmarx One**, including *confirmed*, *pending*, and *under validation* findings.  
+It extracts detailed information about each vulnerability, including:
+- Project name and ID  
+- Scan ID and result ID  
+- CVE or affected package  
+- Severity and state  
+- Whether it is confirmed  
+- Author who commented or confirmed  
+- Associated comment  
+
+The goal is to provide a complete view of SCA vulnerabilities and their interactions within the Checkmarx One environment. It can retrieve up to 365 days of data (not tested beyond that).
+
+---
+
+## Requirements
+
+### Python
+- **Python 3.9+** (Python 3.10 or higher recommended)
+
+### Dependencies
+Install via `pip`:
+```bash
+pip install requests pandas openpyxl
+```
+
+---
+
+## Configuration
+
+At the beginning of the file `sca_all_comments.py`, configure the variables:
+
+```python
+AST_API_BASE          = "https://us.ast.checkmarx.net"     # Checkmarx One AST base URL
+SCA_API_BASE          = "https://us.api-sca.checkmarx.net" # Checkmarx SCA API base URL
+CLIENT_ID             = "..."                              # Application Client ID (OAuth)
+CLIENT_SECRET         = "..."                              # Application Client Secret (OAuth)
+TENANT_NAME           = "..."                              # Customer tenant
+DEFAULT_LOOKBACK_DAYS = 30                                 # How many days to look back in scans
+```
+
+> **Important:**  
+> Adjust the URLs according to your region (`US`, `US2`, `EU`, `EU2`) and insert valid credentials obtained from the Checkmarx One portal.
+
+Example:
+```python
+AST_API_BASE          = "https://eu.ast.checkmarx.net"
+SCA_API_BASE          = "https://eu.api-sca.checkmarx.net"
+CLIENT_ID             = "abcd1234"
+CLIENT_SECRET         = "xyz7890"
+TENANT_NAME           = "mytenant"
+DEFAULT_LOOKBACK_DAYS = 365
+```
+
+---
+
+## How It Works
+
+The script:
+
+1. Authenticates with Checkmarx IAM via OAuth2 (Client Credentials).  
+2. Lists all tenant projects.  
+3. Splits the search period into **smaller windows** (`--window-days`) to reduce load.  
+4. Retrieves *all* SCA scans within the defined interval (`--days`).  
+5. Extracts all vulnerability results (not only confirmed ones).  
+6. Uses **GraphQL** to obtain authors and comments of actions.  
+7. Exports a consolidated report in **Excel (.xlsx)** and **CSV (.csv)**.
+
+---
+
+## CLI Parameters
+
+You can run the script directly from the terminal with several parameters:
+
+```bash
+python sca_all_comments.py [options]
+```
+
+### Available options:
+
+| Parameter | Description | Default |
+|----------|------------|--------|
+| `--days` | Search window in days | `30` |
+| `--window-days` | Size of each internal window | `7` |
+| `--output` | Output file name (.xlsx) | `checkmarx_sca_all.xlsx` |
+| `--projects` | Comma-separated list of projects (names or IDs) | All |
+| `--max-rps-gql` | GraphQL calls per second limit | `2.0` |
+
+---
+
+## Output
+
+The report is saved in the current directory as:
+
+```
+checkmarx_sca_all.xlsx
+checkmarx_sca_all.csv
+```
+
+### Generated columns:
+
+| Field | Description |
+|--------|------------|
+| Project Name | Project name in Checkmarx |
+| Project Id | Unique project ID |
+| Scan Id | Analyzed scan ID |
+| Result Id | Vulnerability ID |
+| CVE/Package | Package name or CVE |
+| Severity | Severity (High, Medium, Low, etc.) |
+| State | Current state (Confirmed, To Verify, etc.) |
+| Confirmed | Indicates whether it was confirmed (`True` / `False`) |
+| Author | User who commented or confirmed |
+| Author Source | Data source (GraphQL or CSV Merge) |
+| Confirm Note | Author's comment |
+| Detected First / Last | First and last detection dates |
+
+---
+
+## Offline Merge (CSV History)
+
+You can complement the report with historical data using a CSV file:
+
+```python
+HISTORY_CSV = r"C:\temp\risk_history.csv"
+```
+
+If configured, the script tries to match vulnerabilities based on:
+- CVE / Package
+- ResultId
+- SimilarityId
+- AlternateId  
+
+This allows filling in authors and comments that are no longer available via the API.
+
+---
+
+## Execution Example
+
+Fetch vulnerabilities from the last **60 days**, with **10-day windows**, for specific projects:
+
+```bash
+python sca_all_comments.py --days 60 --window-days 10 --projects "api-service,web-app"
+```
+
+Expected output:
+```
+[PROJ] api-service (abcd1234)
+  window since 2025-09-10T00:00:00Z: 4 new scans
+    Scan 98765: 12 SCA
+[GQL VARS] scan=98765 proj=abcd mgr=Npm pkg=axios ver=0.21.4 cve=CVE-2023-XXXX
+```
+
+---
+
+## Advanced Features
+
+- **Configurable rate limit** (`--max-rps-gql`) to avoid throttling.  
+- **Intelligent caching** of GraphQL calls.  
+- **Robust error and timeout handling**.  
+- **Automatic pagination** in large tenants.  
+- **Optional CSV merge** for offline history.  
+- **Dual export (Excel + CSV)** for compatibility with Power BI, Excel, or audit scripts.
+
+---
+
+## Code Structure
+
+```
+sca_all_comments.py
+├── Initial configuration (URLs, tokens, parameters)
+├── Helper functions (_is_sca, parse_pkg, etc.)
+├── GraphQL Query + Rate Limit
+├── HistoryIndex class (CSV merge)
+├── Pagination of projects/scans/results
+├── collect_sca_findings()  # Main collection logic
+├── export_report()         # Excel/CSV generation
+└── CLI (argparse)          # Execution with parameters
+```
+
+---
+☆彡
+
+---
+
 # Checkmarx SCA All ☆彡
 Checkmarx One: Relatório de Todas Vulnerabilidades SCA
 
