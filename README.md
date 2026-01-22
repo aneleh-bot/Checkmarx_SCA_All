@@ -1,4 +1,4 @@
-# Checkmarx_SCA_All ☆彡
+# Checkmarx SCA All ☆彡
 Checkmarx One: Relatório de Todas Vulnerabilidades SCA
 
 ## Descrição
